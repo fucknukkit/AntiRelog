@@ -45,7 +45,9 @@ public class CooldownManager {
         cancelRemovalTask(player, type, false);
 
         int durationInTicks = (int) Math.ceil(duration / 50.0);
-        player.setCooldown(type.getMaterial(), durationInTicks);
+        for (Material material : type.getAllMaterials()) {
+            player.setCooldown(material, durationInTicks);
+        }
 
         if (scheduledExecutorService == null) return;
 
@@ -67,7 +69,9 @@ public class CooldownManager {
         if (!VersionUtils.isVersion(11)) return;
 
         cancelRemovalTask(player, type, false);
-        player.setCooldown(type.getMaterial(), 0);
+        for (Material material : type.getAllMaterials()) {
+            player.setCooldown(material, 0);
+        }
     }
 
     private void cancelRemovalTask(Player player, CooldownType type, boolean mayInterruptIfRunning) {
@@ -125,7 +129,9 @@ public class CooldownManager {
     public void clearAll() {
         removalTasks.rowMap().forEach((player, tasks) -> tasks.forEach((type, removal) -> {
             removal.cancel(true);
-            player.setCooldown(type.getMaterial(), 0);
+            for (Material material : type.getAllMaterials()) {
+                player.setCooldown(material, 0);
+            }
         }));
         removalTasks.clear();
         cooldowns.clear();
@@ -157,16 +163,28 @@ public class CooldownManager {
         TOTEM(VersionUtils.isVersion(13) ? Material.TOTEM_OF_UNDYING : Material.matchMaterial("TOTEM"), Settings::getTotemCooldown),
         FIREWORK(VersionUtils.isVersion(13) ? Material.FIREWORK_ROCKET : Material.matchMaterial("FIREWORK"), Settings::getFireworkCooldown),
         RESPAWN_ANCHOR(VersionUtils.isVersion(16) ? Material.RESPAWN_ANCHOR : Material.OBSIDIAN, Settings::getRespawnAnchorCooldown),
-        END_CRYSTAL(Material.END_CRYSTAL, Settings::getEndCrystalCooldown);
+        END_CRYSTAL(Material.END_CRYSTAL, Settings::getEndCrystalCooldown),
+        POTION(Material.POTION, Settings::getPotionCooldown, additionalPotionMaterials());
 
         public static CooldownType[] values = values();
 
         Material material;
+        Material[] additionalMaterials;
         Function<Settings, Integer> cooldown;
 
         CooldownType(Material material, Function<Settings, Integer> cooldown) {
+            this(material, cooldown, new Material[0]);
+        }
+
+        CooldownType(Material material, Function<Settings, Integer> cooldown, Material[] additionalMaterials) {
             this.material = material;
             this.cooldown = cooldown;
+            this.additionalMaterials = additionalMaterials;
+        }
+
+        // Взрывные и туманные зелья появились в 1.9, до этого сплэш-зелье было тем же Material.POTION
+        private static Material[] additionalPotionMaterials() {
+            return VersionUtils.isVersion(9) ? new Material[]{Material.SPLASH_POTION, Material.LINGERING_POTION} : new Material[0];
         }
 
         public int getCooldown(Settings settings) {
@@ -175,6 +193,16 @@ public class CooldownManager {
 
         public Material getMaterial() {
             return material;
+        }
+
+        public Material[] getAllMaterials() {
+            if (additionalMaterials.length == 0) {
+                return new Material[]{material};
+            }
+            Material[] all = new Material[additionalMaterials.length + 1];
+            all[0] = material;
+            System.arraycopy(additionalMaterials, 0, all, 1, additionalMaterials.length);
+            return all;
         }
     }
 }

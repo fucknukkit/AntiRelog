@@ -5,6 +5,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.ThrownPotion;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -130,6 +131,10 @@ public class CooldownListener implements Listener {
             cooldownType = enchanted ? CooldownType.ENC_GOLDEN_APPLE : CooldownType.GOLDEN_APPLE;
             cooldownTime = enchanted ? settings.getEnchantedGoldenAppleCooldown() : settings.getGoldenAppleCooldown();
         }
+        if (isDrinkablePotion(consumeItem)) {
+            cooldownType = CooldownType.POTION;
+            cooldownTime = settings.getPotionCooldown();
+        }
 
         if (cooldownType != null) {
             if (cooldownTime == 0 || pvpManager.isBypassed(event.getPlayer())) {
@@ -197,6 +202,31 @@ public class CooldownListener implements Listener {
         addItemCooldownIfNeeded(player, CooldownType.FIREWORK);
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPotionLaunch(ProjectileLaunchEvent e) {
+        if (!(e.getEntity() instanceof ThrownPotion)) return;
+        if (!(e.getEntity().getShooter() instanceof Player)) return;
+
+        Player player = (Player) e.getEntity().getShooter();
+        if (pvpManager.isBypassed(player)) return;
+
+        long cooldownTime = settings.getPotionCooldown();
+        if (cooldownTime == 0) return;
+
+        if (cooldownTime <= -1) {
+            cancelEventIfInPvp(e, CooldownType.POTION, player);
+            return;
+        }
+
+        if (checkCooldown(player, CooldownType.POTION, cooldownTime * 1000)) {
+            e.setCancelled(true);
+            return;
+        }
+
+        cooldownManager.addCooldown(player, CooldownType.POTION);
+        addItemCooldownIfNeeded(player, CooldownType.POTION);
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onInteract(PlayerInteractEvent event) {
         if (pvpManager.isBypassed(event.getPlayer())) return;
@@ -243,6 +273,15 @@ public class CooldownListener implements Listener {
             }
             cooldownManager.addCooldown(event.getPlayer(), CooldownType.RESPAWN_ANCHOR);
             addItemCooldownIfNeeded(event.getPlayer(), CooldownType.RESPAWN_ANCHOR);
+        } else if (isThrownPotionItem(event.getItem()) && settings.getPotionCooldown() != 0) {
+            long cooldownTime = settings.getPotionCooldown();
+            if (cooldownTime <= -1) {
+                cancelEventIfInPvp(event, CooldownType.POTION, event.getPlayer());
+                return;
+            }
+            if (checkCooldown(event.getPlayer(), CooldownType.POTION, cooldownTime * 1000)) {
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -293,6 +332,14 @@ public class CooldownListener implements Listener {
 
     public boolean isFirework(ItemStack itemStack) {
         return VersionUtils.isVersion(13) ? itemStack.getType() == Material.FIREWORK_ROCKET : itemStack.getType() == Material.getMaterial("FIREWORK");
+    }
+
+    private boolean isDrinkablePotion(ItemStack itemStack) {
+        return itemStack.getType() == Material.POTION;
+    }
+
+    private boolean isThrownPotionItem(ItemStack itemStack) {
+        return VersionUtils.isVersion(9) && (itemStack.getType() == Material.SPLASH_POTION || itemStack.getType() == Material.LINGERING_POTION);
     }
 
     public void cancelEventIfInPvp(Cancellable event, CooldownType type, Player player) {

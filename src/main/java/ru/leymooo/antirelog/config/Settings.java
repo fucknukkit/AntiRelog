@@ -168,6 +168,11 @@ public class Settings extends Configuration {
     @Key("end-crystal-cooldown")
     private int endCrystalCooldown = 30;
 
+    @Comment({"Кулдавн для любых зелий (обычные, взрывные, туманные и донатные) во время пвп.", "Значение 0 отключает кулдаун; -1 " +
+            "отключает использование во время пвп"})
+    @Key("potion-cooldown")
+    private int potionCooldown = 20;
+
     @Override
     public void loaded() {
         this.ignoredWgRegionsSet = ignoredWgRegions.stream().map(String::toLowerCase).collect(Collectors.toSet());
@@ -311,6 +316,10 @@ public class Settings extends Configuration {
         return endCrystalCooldown;
     }
 
+    public int getPotionCooldown() {
+        return potionCooldown;
+    }
+
     @Override
     public String toString() {
         return "Settings{" +
@@ -346,6 +355,7 @@ public class Settings extends Configuration {
                 ", disabledWorlds=" + disabledWorlds +
                 ", pvpBorderRegions=" + pvpBorderRegions +
                 ", pvpBorderWarningDistance=" + pvpBorderWarningDistance +
+                ", potionCooldown=" + potionCooldown +
                 '}';
     }
 }
