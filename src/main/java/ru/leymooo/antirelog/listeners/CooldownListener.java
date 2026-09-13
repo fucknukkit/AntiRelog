@@ -297,9 +297,6 @@ public class CooldownListener implements Listener {
             }
             cooldownManager.addCooldown(event.getPlayer(), CooldownType.RESPAWN_ANCHOR);
             addItemCooldownIfNeeded(event.getPlayer(), CooldownType.RESPAWN_ANCHOR);
-        } else if ((isDrinkablePotion(event.getItem()) || isThrownPotionItem(event.getItem()))
-                && event.getAction().name().startsWith("RIGHT_CLICK")) {
-            checkPotionUse(event, event.getPlayer());
         }
     }
 
@@ -354,10 +351,6 @@ public class CooldownListener implements Listener {
 
     private boolean isDrinkablePotion(ItemStack itemStack) {
         return itemStack.getType() == Material.POTION;
-    }
-
-    private boolean isThrownPotionItem(ItemStack itemStack) {
-        return VersionUtils.isVersion(9) && (itemStack.getType() == Material.SPLASH_POTION || itemStack.getType() == Material.LINGERING_POTION);
     }
 
     public void cancelEventIfInPvp(Cancellable event, CooldownType type, Player player) {
