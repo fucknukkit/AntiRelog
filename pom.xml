@@ -6,7 +6,7 @@
 
     <groupId>ru.leymooo</groupId>
     <artifactId>antirelog</artifactId>
-    <version>3.3.0</version>
+    <version>3.3.1</version>
     <packaging>jar</packaging>
 
     <name>AntiRelog</name>
@@ -130,6 +130,13 @@
             <artifactId>ProtocolLib</artifactId>
             <version>5.4.0</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>fun.cubehead</groupId>
+            <artifactId>visualcooldown-paper</artifactId>
+            <version>0.1.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/visualcooldown-paper-0.1.1.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.geysermc.floodgate</groupId>

@@ -13,7 +13,7 @@ public class Settings extends Configuration {
 
     @Final
     @Key("config-version")
-    private String configVersion = "1.9";
+    private String configVersion = "1.10";
     private Messages messages = new Messages();
 
     @Comment("Кулдавн для обычных золотых яблок во время пвп.")

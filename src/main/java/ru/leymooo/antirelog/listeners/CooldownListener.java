@@ -131,11 +131,6 @@ public class CooldownListener implements Listener {
             cooldownType = enchanted ? CooldownType.ENC_GOLDEN_APPLE : CooldownType.GOLDEN_APPLE;
             cooldownTime = enchanted ? settings.getEnchantedGoldenAppleCooldown() : settings.getGoldenAppleCooldown();
         }
-        if (isDrinkablePotion(consumeItem)) {
-            cooldownType = CooldownType.POTION;
-            cooldownTime = settings.getPotionCooldown();
-        }
-
         if (cooldownType != null) {
             if (cooldownTime == 0 || pvpManager.isBypassed(event.getPlayer())) {
                 return;
@@ -203,28 +198,57 @@ public class CooldownListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPotionConsume(PlayerItemConsumeEvent event) {
+        if (isDrinkablePotion(event.getItem())) {
+            checkPotionUse(event, event.getPlayer());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPotionConsumed(PlayerItemConsumeEvent event) {
+        if (isDrinkablePotion(event.getItem())) {
+            recordPotionUse(event.getPlayer(), event.getItem());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPotionLaunch(ProjectileLaunchEvent e) {
         if (!(e.getEntity() instanceof ThrownPotion)) return;
         if (!(e.getEntity().getShooter() instanceof Player)) return;
 
-        Player player = (Player) e.getEntity().getShooter();
+        checkPotionUse(e, (Player) e.getEntity().getShooter());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPotionLaunched(ProjectileLaunchEvent event) {
+        if (!(event.getEntity() instanceof ThrownPotion)) return;
+        if (!(event.getEntity().getShooter() instanceof Player)) return;
+
+        recordPotionUse((Player) event.getEntity().getShooter(), ((ThrownPotion) event.getEntity()).getItem());
+    }
+
+    private void checkPotionUse(Cancellable event, Player player) {
         if (pvpManager.isBypassed(player)) return;
 
         long cooldownTime = settings.getPotionCooldown();
         if (cooldownTime == 0) return;
 
         if (cooldownTime <= -1) {
-            cancelEventIfInPvp(e, CooldownType.POTION, player);
+            cancelEventIfInPvp(event, CooldownType.POTION, player);
             return;
         }
 
         if (checkCooldown(player, CooldownType.POTION, cooldownTime * 1000)) {
-            e.setCancelled(true);
-            return;
+            event.setCancelled(true);
         }
+    }
 
+    private void recordPotionUse(Player player, ItemStack item) {
+        if (settings.getPotionCooldown() <= 0 || pvpManager.isBypassed(player)) return;
         cooldownManager.addCooldown(player, CooldownType.POTION);
-        addItemCooldownIfNeeded(player, CooldownType.POTION);
+        if (!pvpManager.isPvPModeEnabled() || pvpManager.isInPvP(player)) {
+            cooldownManager.addItemCooldown(player, CooldownType.POTION, settings.getPotionCooldown() * 1000L, item);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
@@ -273,15 +297,9 @@ public class CooldownListener implements Listener {
             }
             cooldownManager.addCooldown(event.getPlayer(), CooldownType.RESPAWN_ANCHOR);
             addItemCooldownIfNeeded(event.getPlayer(), CooldownType.RESPAWN_ANCHOR);
-        } else if (isThrownPotionItem(event.getItem()) && settings.getPotionCooldown() != 0) {
-            long cooldownTime = settings.getPotionCooldown();
-            if (cooldownTime <= -1) {
-                cancelEventIfInPvp(event, CooldownType.POTION, event.getPlayer());
-                return;
-            }
-            if (checkCooldown(event.getPlayer(), CooldownType.POTION, cooldownTime * 1000)) {
-                event.setCancelled(true);
-            }
+        } else if ((isDrinkablePotion(event.getItem()) || isThrownPotionItem(event.getItem()))
+                && event.getAction().name().startsWith("RIGHT_CLICK")) {
+            checkPotionUse(event, event.getPlayer());
         }
     }
 
